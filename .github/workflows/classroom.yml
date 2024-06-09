@@ -1,0 +1,80 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: HTTP GET Request
+      id: http-get-request
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: HTTP GET Request
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh
+        timeout: 10
+        max-score: 5
+    - name: HTTP HEAD Request
+      id: http-head-request
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: HTTP HEAD Request
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh head_request
+        timeout: 10
+        max-score: 5
+    - name: Delay Endpoint
+      id: delay-endpoint
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Delay Endpoint
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh delay_endpoint
+        timeout: 10
+        max-score: 4
+    - name: Error Handling
+      id: error-handling
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Error Handling
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh error_handling
+        timeout: 10
+        max-score: 2
+    - name: Valgrind
+      id: valgrind
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Valgrind
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh valgrind
+        timeout: 10
+        max-score: 2
+    - name: Style Check
+      id: style-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Style Check
+        setup-command: wget -q --no-cache https://raw.githubusercontent.com/amigler/357-s24/main/autograder/a5/ag.sh
+        command: bash ag.sh style
+        timeout: 10
+        max-score: 2
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        HTTP-GET-REQUEST_RESULTS: "${{steps.http-get-request.outputs.result}}"
+        HTTP-HEAD-REQUEST_RESULTS: "${{steps.http-head-request.outputs.result}}"
+        DELAY-ENDPOINT_RESULTS: "${{steps.delay-endpoint.outputs.result}}"
+        ERROR-HANDLING_RESULTS: "${{steps.error-handling.outputs.result}}"
+        VALGRIND_RESULTS: "${{steps.valgrind.outputs.result}}"
+        STYLE-CHECK_RESULTS: "${{steps.style-check.outputs.result}}"
+      with:
+        runners: http-get-request,http-head-request,delay-endpoint,error-handling,valgrind,style-check
