@@ -21,8 +21,7 @@ int main(int argc, char const *argv[])
     printf("Port Number: %d\n", port);
 
     int sockfd;
-    struct sockaddr_in serveraddr;
-    // int buf[4097];
+    struct sockaddr_in serveradr;
 
     // create a socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -32,24 +31,58 @@ int main(int argc, char const *argv[])
     }
 
     // set up address
-    bzero(&serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serveraddr.sin_port = htons(port);
+    bzero(&serveradr, sizeof(serveradr));
+    serveradr.sin_family = AF_INET;
+    serveradr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serveradr.sin_port = htons(port);
 
     // bind listening socket to address
-    if ((bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr))) < 0)
+    if ((bind(sockfd, (struct sockaddr *)&serveradr, sizeof(serveradr))) < 0)
     {
         fprintf(stderr, "Bind Error\n");
         return EXIT_FAILURE;
     }
 
-    //listen on the socket
+    // listen on the socket
     if ((listen(sockfd, 10)) < 0)
     {
         fprintf(stderr, "Listen Error\n");
         return EXIT_FAILURE;
     }
 
+    // server loop
+    int connection;
+    char inbuf[4096];
+    char outbuf[4096];
+    int bytes;
+    while (1)
+    {
+        struct sockaddr_in adr;
+        socklen_t adrlen;
+        printf("Server running\n");
+        connection = accept(sockfd, (struct sockaddr *)NULL, NULL);
+        for (int i = 0; i < 4096; i++)
+        {
+            inbuf[i] = 0;
+        }
+        while ((bytes = read(connection, inbuf, 4095)) > 0)
+        {
+            printf("%s", inbuf);
+            // detect end of http request
+            if (inbuf[bytes - 1] == '\n' && inbuf[bytes - 2] == '\r' && inbuf[bytes - 3] == '\n' && inbuf[bytes - 4] == '\r')
+            {
+                break;
+            }
+        }
+        if (bytes == -1)
+        {
+            fprintf(stderr, "Read Error\n");
+            return EXIT_FAILURE;
+        }
+        //single response for noe
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 25\r\n\r\n<---- contents here ---->" );
+        write(connection, outbuf, strlen(outbuf));
+        close(connection);
+    }
     return EXIT_SUCCESS;
 }
