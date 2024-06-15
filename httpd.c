@@ -1,5 +1,12 @@
 #include "httpd.h"
 
+#define BAD_REQUEST "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\n\r\n400 bad request\n%s"
+#define NOT_IMPLEMENTED "HTTP/1.1 501 Not Implemented\r\nContent-Type: text/html\r\n\r\n501 Not Implemented\n%s"
+#define DELAY_SUCCESS "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 25\r\n\r\nResponse after a delay"
+#define NOT_FOUND "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s"
+#define INTERNAL_ERROR "HTTP/1.1 500 Internal Error\r\nContent-Type: text/html\r\n\r\n500 Internal Error\n%s"
+#define SUCCESS "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n"
+
 int main(int argc, char const *argv[])
 {
     int port = 0;
@@ -92,7 +99,7 @@ void *handle_connection(void *pclient)
         else
         {
             printf("Error HTTP bad request\n");
-            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\n\r\n400 bad request\n%s", inbuf);
+            snprintf(outbuf, sizeof(outbuf), BAD_REQUEST, inbuf);
             write(connection, outbuf, strlen(outbuf));
             close(connection);
             return NULL;
@@ -120,7 +127,7 @@ void *handle_connection(void *pclient)
     else
     {
         printf("501\n");
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 501 Not Implemented\r\nContent-Type: text/html\r\n\r\n501 Not Implemented\n%s", inbuf);
+        snprintf(outbuf, sizeof(outbuf), NOT_IMPLEMENTED, inbuf);
         write(connection, outbuf, strlen(outbuf));
         close(connection);
         return NULL;
@@ -132,7 +139,7 @@ void *handle_connection(void *pclient)
     {
         printf("Delay\n");
         sleep(atoi(&inbuf[comlen + 8]));
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 25\r\n\r\nResponse after a delay");
+        snprintf(outbuf, sizeof(outbuf), DELAY_SUCCESS);
         write(connection, outbuf, strlen(outbuf));
         close(connection);
         return NULL;
@@ -147,7 +154,7 @@ void *handle_connection(void *pclient)
         if (inbuf[i] == '.' && inbuf[i + 1] == '.')
         {
             printf("Error Directory Traversal\n");
-            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+            snprintf(outbuf, sizeof(outbuf), NOT_FOUND, inbuf);
             write(connection, outbuf, strlen(outbuf));
             close(connection);
             return NULL;
@@ -162,7 +169,7 @@ void *handle_connection(void *pclient)
     if (realpath(path, resolved_path) == NULL)
     {
         printf("No path found: |%s| %d\n", resolved_path, comlen);
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+        snprintf(outbuf, sizeof(outbuf), NOT_FOUND, inbuf);
         write(connection, outbuf, strlen(outbuf));
         close(connection);
         return NULL;
@@ -173,7 +180,7 @@ void *handle_connection(void *pclient)
     if (fp == NULL)
     {
         printf("Error opening\n");
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 500 Internal Error\r\nContent-Type: text/html\r\n\r\n500 Internal Error\n%s", inbuf);
+        snprintf(outbuf, sizeof(outbuf), INTERNAL_ERROR, inbuf);
         write(connection, outbuf, strlen(outbuf));
         close(connection);
         return NULL;
@@ -188,7 +195,7 @@ void *handle_connection(void *pclient)
         return NULL;
     }
 
-    snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", (long long)statbuf.st_size);
+    snprintf(outbuf, sizeof(outbuf), SUCCESS, (long long)statbuf.st_size);
     write(connection, outbuf, strlen(outbuf));
 
     // Send file contents
