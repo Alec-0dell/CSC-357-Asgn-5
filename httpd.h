@@ -14,5 +14,6 @@
 #include <netdb.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <pthread.h>
 
-char *read_header(FILE *file);
+void *handle_connection(void *connection);
