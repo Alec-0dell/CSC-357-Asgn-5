@@ -12,3 +12,5 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include <netdb.h>
+#include <sys/stat.h>
+#include <sys/syslimits.h>
