@@ -191,43 +191,19 @@ void *handle_connection(void *pclient)
         return NULL;
     }
 
+    snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", (long long)statbuf.st_size);
+    write(connection, outbuf, strlen(outbuf));
+
     // Send file contents
     if (comlen == 3)
     {
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", statbuf.st_size);
-        write(connection, outbuf, strlen(outbuf));
         while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
         {
             write(connection, outbuf, bytes);
         }
     }
-    else if (comlen == 4)
-    {
-        char *headcp = read_header(fp);
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", strlen(headcp));
-        write(connection, outbuf, strlen(outbuf));
-        write(connection, headcp, strlen(headcp));
-    }
 
     fclose(fp);
     close(connection);
     return NULL;
-}
-
-char *read_header(FILE *file)
-{
-    char *hdata = (char *)malloc((4097) * sizeof(char));
-    memset(hdata, 0, 4097);
-    if (hdata == NULL)
-    {
-        return NULL;
-    }
-    int bytes = fread(hdata, sizeof(char), 4096, file);
-    if (bytes < 4096)
-    {
-        free(hdata);
-        return NULL;
-    }
-    hdata[bytes] = '\0';
-    return hdata;
 }
