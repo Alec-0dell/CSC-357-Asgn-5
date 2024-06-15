@@ -92,7 +92,7 @@ void *handle_connection(void *pclient)
         else
         {
             printf("Error HTTP bad request\n");
-            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 400 Not Found\r\nContent-Type: text/html\r\n\r\n400 bad request\n%s", inbuf);
+            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\n\r\n400 bad request\n%s", inbuf);
             write(connection, outbuf, strlen(outbuf));
             close(connection);
             return NULL;
