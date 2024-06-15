@@ -142,9 +142,20 @@ void *handle_connection(void *pclient)
         close(connection);
         return NULL;
     }
-
-
-
+    else
+    {
+        for (size_t i = comlen + 1; inbuf[i] != ' '; i++)
+        {
+            if (inbuf[i] == '.')
+            {
+                printf("Error Directory Traversal\n");
+                snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+                write(connection, outbuf, strlen(outbuf));
+                close(connection);
+                return NULL;
+            }
+        }
+    }
 
     // check if the file exists
     strcpy(path, &(inbuf[comlen + 2]));
@@ -159,7 +170,6 @@ void *handle_connection(void *pclient)
         close(connection);
         return NULL;
     }
-
 
     // open the file
     FILE *fp = fopen(resolved_path, "r");
@@ -181,23 +191,23 @@ void *handle_connection(void *pclient)
         return NULL;
     }
 
-    snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", statbuf.st_size);
-    write(connection, outbuf, strlen(outbuf));
-
     // Send file contents
-        if (comlen == 3)
+    if (comlen == 3)
+    {
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", statbuf.st_size);
+        write(connection, outbuf, strlen(outbuf));
+        while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
         {
-            while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
-            {
-                write(connection, outbuf, bytes);
-            }
+            write(connection, outbuf, bytes);
         }
-        else if (comlen == 4)
-        {
-            char *headcp = read_header(fp);
-            write(connection, headcp, strlen(headcp));
-        }
-
+    }
+    else if (comlen == 4)
+    {
+        char *headcp = read_header(fp);
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", strlen(headcp));
+        write(connection, outbuf, strlen(outbuf));
+        write(connection, headcp, strlen(headcp));
+    }
 
     fclose(fp);
     close(connection);
