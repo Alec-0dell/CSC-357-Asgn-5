@@ -89,6 +89,14 @@ void *handle_connection(void *pclient)
         {
             break;
         }
+        else
+        {
+            printf("Error HTTP bad request\n");
+            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n400 bad request\n%s", inbuf);
+            write(connection, outbuf, strlen(outbuf));
+            close(connection);
+            return NULL;
+        }
     }
     if (bytes == -1)
     {
@@ -107,7 +115,7 @@ void *handle_connection(void *pclient)
     else if (strcmp(request, "HEAD") == 0)
     {
         printf("Head\n");
-        comlen = 3;
+        comlen = 4;
     }
     else
     {
@@ -134,26 +142,15 @@ void *handle_connection(void *pclient)
         printf("No delay\n");
     }
 
-    if (inbuf[comlen + 1] == '*')
+    for (size_t i = comlen + 1; inbuf[i] != ' '; i++)
     {
-        printf("Error HTTP bad request\n");
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
-        write(connection, outbuf, strlen(outbuf));
-        close(connection);
-        return NULL;
-    }
-    else
-    {
-        for (size_t i = comlen + 1; inbuf[i] != ' '; i++)
+        if (inbuf[i] == '.' && inbuf[i + 1] == '.')
         {
-            if (inbuf[i] == '.' && inbuf[i + 1] == '.')
-            {
-                printf("Error Directory Traversal\n");
-                snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
-                write(connection, outbuf, strlen(outbuf));
-                close(connection);
-                return NULL;
-            }
+            printf("Error Directory Traversal\n");
+            snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+            write(connection, outbuf, strlen(outbuf));
+            close(connection);
+            return NULL;
         }
     }
 
@@ -164,7 +161,7 @@ void *handle_connection(void *pclient)
         *space = '\0';
     if (realpath(path, resolved_path) == NULL)
     {
-        perror("realpath");
+        printf("No path found: |%s| %d\n", resolved_path, comlen);
         snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
         write(connection, outbuf, strlen(outbuf));
         close(connection);
