@@ -56,7 +56,7 @@ int main(int argc, char const *argv[])
     char outbuf[4096];
     char path[PATH_MAX];
     char resolved_path[PATH_MAX];
-    char * rpath;
+    char *rpath;
     int bytes;
     char request[5];
     char delay[8];
@@ -128,7 +128,6 @@ int main(int argc, char const *argv[])
         char *space = strchr(path, ' ');
         if (space)
             *space = '\0';
-
         snprintf(resolved_path, sizeof(resolved_path), ".%s", path);
         printf("Path: %s\n", resolved_path);
 
@@ -164,14 +163,38 @@ int main(int argc, char const *argv[])
         snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %lld\r\n\r\n", statbuf.st_size);
         write(connection, outbuf, strlen(outbuf));
 
-        // Send file contents
-        while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
+        if (comlen == 3)
         {
-            write(connection, outbuf, bytes);
+            // Send file contents
+            while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
+            {
+                write(connection, outbuf, bytes);
+            }
+        }
+        else if (comlen == 4)
+        {
+            write(connection, read_header(fp), 4096);
         }
 
         fclose(fp);
         close(connection);
     }
     return EXIT_SUCCESS;
+}
+
+char *read_header(FILE *file)
+{
+    char *hdata = (char *)malloc((4097) * sizeof(char));
+    if (hdata == NULL)
+    {
+        return NULL;
+    }
+    int bytes = fread(hdata, sizeof(char), 4096, file);
+    if (bytes < 4096)
+    {
+        free(hdata);
+        return NULL;
+    }
+    hdata[bytes] = '\0';
+    return hdata;
 }

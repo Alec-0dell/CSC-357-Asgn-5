@@ -1,9 +1,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <signal.h> 
-#include <stdio.h> 
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdarg.h>
@@ -13,4 +13,6 @@
 #include <sys/ioctl.h>
 #include <netdb.h>
 #include <sys/stat.h>
-#include <sys/syslimits.h>
+#include <limits.h>
+
+char *read_header(FILE *file);
