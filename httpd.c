@@ -65,9 +65,9 @@ int main(int argc, char const *argv[])
     return EXIT_SUCCESS;
 }
 
-void* handle_connection(void* pclient)
+void *handle_connection(void *pclient)
 {
-    int connection = *(int*)pclient;
+    int connection = *(int *)pclient;
     free(pclient);
     char inbuf[4096];
     char outbuf[4096];
@@ -151,6 +151,29 @@ void* handle_connection(void* pclient)
         close(connection);
         return NULL;
     }
+    else if (*rpath == '*')
+    {
+        printf("Error HTTP bad request: %s\n", rpath);
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+        write(connection, outbuf, strlen(outbuf));
+        close(connection);
+        return NULL;
+    }
+    else
+    {
+        char prev = *rpath;
+        for (int i = 1; prev != '\0'; i++)
+        {
+            if (prev == '.' && rpath[i] == '.')
+            {
+                printf("Error directory traversal: %s\n", rpath);
+                snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+                write(connection, outbuf, strlen(outbuf));
+                close(connection);
+                return NULL;
+            }
+        }
+    }
 
     // open the file
     FILE *fp = fopen(resolved_path, "r");
@@ -176,12 +199,40 @@ void* handle_connection(void* pclient)
     write(connection, outbuf, strlen(outbuf));
 
     // Send file contents
-    while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
-    {
-        write(connection, outbuf, bytes);
-    }
+        if (comlen == 3)
+        {
+            // Send file contents
+            while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
+            {
+                write(connection, outbuf, bytes);
+            }
+        }
+        else if (comlen == 4)
+        {
+            char *headcp = read_header(fp);
+            write(connection, headcp, strlen(headcp));
+        }
+
 
     fclose(fp);
     close(connection);
     return NULL;
+}
+
+char *read_header(FILE *file)
+{
+    char *hdata = (char *)malloc((4097) * sizeof(char));
+    memset(hdata, 0, 4097);
+    if (hdata == NULL)
+    {
+        return NULL;
+    }
+    int bytes = fread(hdata, sizeof(char), 4096, file);
+    if (bytes < 4096)
+    {
+        free(hdata);
+        return NULL;
+    }
+    hdata[bytes] = '\0';
+    return hdata;
 }

@@ -17,3 +17,4 @@
 #include <pthread.h>
 
 void *handle_connection(void *connection);
+char *read_header(FILE *file);
