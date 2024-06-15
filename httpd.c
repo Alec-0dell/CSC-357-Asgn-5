@@ -199,20 +199,10 @@ void *handle_connection(void *pclient)
     write(connection, outbuf, strlen(outbuf));
 
     // Send file contents
-        if (comlen == 3)
-        {
-            // Send file contents
-            while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
-            {
-                write(connection, outbuf, bytes);
-            }
-        }
-        else if (comlen == 4)
-        {
-            char *headcp = read_header(fp);
-            write(connection, headcp, strlen(headcp));
-        }
-
+    while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
+    {
+        write(connection, outbuf, bytes);
+    }
 
     fclose(fp);
     close(connection);
