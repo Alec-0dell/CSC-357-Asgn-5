@@ -73,7 +73,6 @@ void *handle_connection(void *pclient)
     char outbuf[4096];
     char path[PATH_MAX];
     char resolved_path[PATH_MAX];
-    char *rpath;
     int bytes;
     char request[5];
     char delay[8];
@@ -135,45 +134,32 @@ void *handle_connection(void *pclient)
         printf("No delay\n");
     }
 
+    if (inbuf[comlen + 1] == '*')
+    {
+        printf("Error HTTP bad request\n");
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+        write(connection, outbuf, strlen(outbuf));
+        close(connection);
+        return NULL;
+    }
+
+
+
+
     // check if the file exists
-    strcpy(path, &(inbuf[comlen + 1]));
+    strcpy(path, &(inbuf[comlen + 2]));
     char *space = strchr(path, ' ');
     if (space)
         *space = '\0';
-    snprintf(resolved_path, sizeof(resolved_path), ".%s", path);
-    printf("Path: %s\n", resolved_path);
+    if (realpath(path, resolved_path) == NULL)
+    {
+        perror("realpath");
+        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
+        write(connection, outbuf, strlen(outbuf));
+        close(connection);
+        return NULL;
+    }
 
-    if ((rpath = realpath(resolved_path, NULL)) == NULL)
-    {
-        printf("Error existence: %s\n", rpath);
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
-        write(connection, outbuf, strlen(outbuf));
-        close(connection);
-        return NULL;
-    }
-    else if (*rpath == '*')
-    {
-        printf("Error HTTP bad request: %s\n", rpath);
-        snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
-        write(connection, outbuf, strlen(outbuf));
-        close(connection);
-        return NULL;
-    }
-    else
-    {
-        char prev = *rpath;
-        for (int i = 1; prev != '\0'; i++)
-        {
-            if (prev == '.' && rpath[i] == '.')
-            {
-                printf("Error directory traversal: %s\n", rpath);
-                snprintf(outbuf, sizeof(outbuf), "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n404 Not found\n%s", inbuf);
-                write(connection, outbuf, strlen(outbuf));
-                close(connection);
-                return NULL;
-            }
-        }
-    }
 
     // open the file
     FILE *fp = fopen(resolved_path, "r");
@@ -199,10 +185,19 @@ void *handle_connection(void *pclient)
     write(connection, outbuf, strlen(outbuf));
 
     // Send file contents
-    while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
-    {
-        write(connection, outbuf, bytes);
-    }
+        if (comlen == 3)
+        {
+            while ((bytes = fread(outbuf, 1, sizeof(outbuf), fp)) > 0)
+            {
+                write(connection, outbuf, bytes);
+            }
+        }
+        else if (comlen == 4)
+        {
+            char *headcp = read_header(fp);
+            write(connection, headcp, strlen(headcp));
+        }
+
 
     fclose(fp);
     close(connection);
